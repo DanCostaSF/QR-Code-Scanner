@@ -25,6 +25,7 @@ class QRCodeActivity : ComponentActivity() {
 
                     startActivity(intent)
                 }
+
             }
         }
     }

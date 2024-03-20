@@ -4,24 +4,14 @@ package com.example.qrcodescanner.qrcode
 
 import android.Manifest
 import androidx.camera.core.ExperimentalGetImage
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -31,7 +21,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.example.qrcodescanner.ui.theme.QRCodeScannerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -40,6 +29,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 @ExperimentalGetImage
 @Composable
 fun TesteBarcode(parametro: (String?) -> Unit) {
+
+    var barcodeString: String? = null
+
     QRCodeScannerTheme {
         val cameraPermission = rememberPermissionState(
             Manifest.permission.CAMERA
@@ -54,36 +46,10 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
             BarcodeCam()
         }
 
-        var lastScannedBarcode by remember {
-            mutableStateOf<String?>(null)
-        }
-
         Scaffold(
             modifier = Modifier.fillMaxSize()
         ) { paddingValues ->
             Box {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(2f),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    AnimatedVisibility(
-                        visible = lastScannedBarcode != null,
-                        enter = fadeIn() + slideInVertically(),
-                        exit = fadeOut() + slideOutVertically()
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(
-                                horizontal = 16.dp,
-                                vertical = 20.dp
-                            )
-                        ) {
-                            Text(text = lastScannedBarcode.toString())
-                        }
-
-                    }
-                }
                 Box(
                     modifier = Modifier
                         .padding(paddingValues)
@@ -129,8 +95,10 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
                         camera.CameraPreview(
                             onBarcodeScanned = { barcode ->
                                 barcode?.displayValue?.let {
-                                    lastScannedBarcode = it
-                                    parametro.invoke(it)
+                                    if (barcodeString.isNullOrEmpty()) {
+                                        parametro.invoke(it)
+                                    }
+                                    barcodeString = it
                                 }
                             }
                         )
@@ -140,3 +108,4 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
         }
     }
 }
+
