@@ -1,27 +1,26 @@
-package com.example.qrcodescanner
+package com.example.qrcodescanner.qrcode
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.camera.core.ExperimentalGetImage
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.qrcodescanner.qrcode.QRCodeActivity
 import com.example.qrcodescanner.ui.theme.QRCodeScannerTheme
 
-@ExperimentalGetImage
-class MainActivity : ComponentActivity() {
+class FinishActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val barcode = intent.getStringExtra("barcode")
+
         setContent {
             QRCodeScannerTheme {
                 Surface(
@@ -33,18 +32,12 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Button(
-                            onClick = {
-                                val intent =
-                                    Intent(this@MainActivity, QRCodeActivity::class.java)
-                                startActivity(intent)
-                            }
-                        ) {
-                            Text(text = "QR Code")
-                        }
+                        Text(text = barcode ?: "cuzinho")
                     }
                 }
             }
         }
+        
     }
+    
 }

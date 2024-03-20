@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+
 package com.example.qrcodescanner.qrcode
 
 import android.Manifest
@@ -35,10 +37,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @ExperimentalGetImage
 @Composable
-fun TesteBarcode() {
+fun TesteBarcode(parametro: (String?) -> Unit) {
     QRCodeScannerTheme {
         val cameraPermission = rememberPermissionState(
             Manifest.permission.CAMERA
@@ -129,6 +130,7 @@ fun TesteBarcode() {
                             onBarcodeScanned = { barcode ->
                                 barcode?.displayValue?.let {
                                     lastScannedBarcode = it
+                                    parametro.invoke(it)
                                 }
                             }
                         )
