@@ -95,10 +95,7 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
                         camera.CameraPreview(
                             onBarcodeScanned = { barcode ->
                                 barcode?.displayValue?.let {
-                                    if (barcodeString.isNullOrEmpty()) {
                                         parametro.invoke(it)
-                                    }
-                                    barcodeString = it
                                 }
                             }
                         )
@@ -108,4 +105,3 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
         }
     }
 }
-

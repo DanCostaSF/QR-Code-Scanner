@@ -12,13 +12,11 @@ class QRCodeActivity : ComponentActivity() {
 
     val viewModel: QRCodeViewModel by viewModels()
 
-    var isEnabledQrCode = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             TesteBarcode() {
-                if (!it.isNullOrEmpty() && !isEnabledQrCode) {
-                    isEnabledQrCode = true
+                if (!it.isNullOrEmpty()) {
                     val intent = Intent(this@QRCodeActivity, FinishActivity::class.java).run {
                         this.putExtra("barcode", it)
                     }
@@ -29,5 +27,4 @@ class QRCodeActivity : ComponentActivity() {
             }
         }
     }
-
 }
