@@ -14,23 +14,25 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.qrcodescanner.ui.theme.GreenQRCode
 import com.example.qrcodescanner.ui.theme.QRCodeScannerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @ExperimentalGetImage
 @Composable
 fun TesteBarcode(parametro: (String?) -> Unit) {
-
-    var barcodeString: String? = null
 
     QRCodeScannerTheme {
         val cameraPermission = rememberPermissionState(
@@ -61,6 +63,9 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
 
                             drawContent()
 
+                            val rectangleTopLeft = Offset((canvasWidth - width) / 2, canvasHeight * .3f)
+                            val rectangleSize = Size(width, height)
+
                             drawRect(Color(0x99000000))
 
                             // Draws the rectangle in the middle
@@ -71,24 +76,17 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
                                 ),
                                 size = Size(width, height),
                                 color = Color.Transparent,
-                                cornerRadius = CornerRadius(24.dp.toPx()),
                                 blendMode = BlendMode.SrcIn
                             )
 
-                            // Draws the rectangle outline
-                            drawRoundRect(
-                                topLeft = Offset(
-                                    (canvasWidth - width) / 2,
-                                    canvasHeight * .3f
-                                ),
-                                color = Color.White,
-                                size = Size(width, height),
-                                cornerRadius = CornerRadius(24.dp.toPx()),
-                                style = Stroke(
-                                    width = 2.dp.toPx()
-                                ),
-                                blendMode = BlendMode.Src
+                            drawQrBorderCanvas(
+                                curve = 0.dp,
+                                strokeWidth = 3.dp,
+                                capSize = 24.dp,
+                                rectangleTopLeft = rectangleTopLeft,
+                                rectangleSize = rectangleSize
                             )
+
                         }
                 ) {
                     if (cameraPermission.status.isGranted) {
@@ -104,4 +102,81 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
             }
         }
     }
+}
+
+private fun DrawScope.drawQrBorderCanvas(
+    borderColor: Color = GreenQRCode,
+    curve: Dp,
+    strokeWidth: Dp,
+    capSize: Dp,
+    lineCap: StrokeCap = StrokeCap.Round,
+    rectangleTopLeft: Offset,
+    rectangleSize: Size
+) {
+    val curvePx = curve.toPx()
+    val mCapSize = capSize.toPx()
+
+    // Linha inferior esquerda para centro
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y + rectangleSize.height),
+        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y + rectangleSize.height),
+        strokeWidth.toPx(), lineCap
+    )
+
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y + rectangleSize.height),
+        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y + rectangleSize.height),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha superior
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y + rectangleSize.height - mCapSize),
+        Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y + rectangleSize.height - curvePx),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha inferior
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y + rectangleSize.height),
+        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y + rectangleSize.height),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha esquerda
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x, rectangleTopLeft.y + curvePx),
+        Offset(rectangleTopLeft.x, rectangleTopLeft.y + mCapSize),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha superior esquerda para centro
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y),
+        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha superior direita para centro
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y),
+        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y),
+        strokeWidth.toPx(), lineCap
+    )
+
+    // Linha inferior direita para centro
+    drawLine(
+        SolidColor(borderColor),
+        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y + rectangleSize.height),
+        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y + rectangleSize.height),
+        strokeWidth.toPx(), lineCap
+    )
+
 }

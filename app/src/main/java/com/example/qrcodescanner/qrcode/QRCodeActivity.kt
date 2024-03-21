@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.camera.core.ExperimentalGetImage
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @ExperimentalGetImage
 class QRCodeActivity : ComponentActivity() {
