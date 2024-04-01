@@ -28,21 +28,22 @@ import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
 @ExperimentalGetImage
-class BarcodeCam {
-
+internal class UDSQRCodeCamera {
     private var camera: Camera? = null
 
     @Composable
     fun CameraPreview(
-        onBarcodeScanned: (Barcode?) -> Unit
+        onBarcodeScanned: (String) -> Unit,
+        onFailure: ((Exception) -> Unit)? = null,
     ) {
         val lifecycleOwner = LocalLifecycleOwner.current
 
-        val imageCapture = remember {
-            ImageCapture
-                .Builder()
-                .build()
-        }
+        val imageCapture =
+            remember {
+                ImageCapture
+                    .Builder()
+                    .build()
+            }
 
         AndroidView(
             factory = { context ->
@@ -50,10 +51,9 @@ class BarcodeCam {
                     layoutParams =
                         LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+                            ViewGroup.LayoutParams.MATCH_PARENT,
                         )
                     scaleType = PreviewView.ScaleType.FILL_START
-
 
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
@@ -63,11 +63,12 @@ class BarcodeCam {
                             previewView = this,
                             imageCapture = imageCapture,
                             lifecycleOwner = lifecycleOwner,
-                            onBarcodeScanned = onBarcodeScanned
+                            onFailure = onFailure,
+                            onBarcodeScanned = onBarcodeScanned,
                         )
                     }, ContextCompat.getMainExecutor(context))
                 }
-            }
+            },
         )
     }
 
@@ -76,7 +77,8 @@ class BarcodeCam {
         previewView: PreviewView,
         lifecycleOwner: LifecycleOwner,
         imageCapture: ImageCapture,
-        onBarcodeScanned: (Barcode?) -> Unit
+        onFailure: ((Exception) -> Unit)? = null,
+        onBarcodeScanned: (String) -> Unit,
     ) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
@@ -84,34 +86,37 @@ class BarcodeCam {
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
+            val preview =
+                Preview.Builder()
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
 
             val executor = Executors.newSingleThreadExecutor()
 
-            val imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
+            val imageAnalysis =
+                ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
 
-            val options = BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(
-                    Barcode.FORMAT_QR_CODE,
-                    Barcode.FORMAT_AZTEC,
-                    Barcode.FORMAT_CODE_128,
-                    Barcode.FORMAT_CODE_39,
-                    Barcode.FORMAT_CODE_93,
-                    Barcode.FORMAT_EAN_8,
-                    Barcode.FORMAT_EAN_13,
-                    Barcode.FORMAT_QR_CODE,
-                    Barcode.FORMAT_UPC_A,
-                    Barcode.FORMAT_UPC_E,
-                    Barcode.FORMAT_PDF417
-                )
-                .enableAllPotentialBarcodes()
-                .build()
+            val options =
+                BarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                        Barcode.FORMAT_AZTEC,
+                        Barcode.FORMAT_CODE_128,
+                        Barcode.FORMAT_CODE_39,
+                        Barcode.FORMAT_CODE_93,
+                        Barcode.FORMAT_EAN_8,
+                        Barcode.FORMAT_EAN_13,
+                        Barcode.FORMAT_QR_CODE,
+                        Barcode.FORMAT_UPC_A,
+                        Barcode.FORMAT_UPC_E,
+                        Barcode.FORMAT_PDF417,
+                    )
+                    .enableAllPotentialBarcodes()
+                    .build()
 
             val scanner = BarcodeScanning.getClient(options)
 
@@ -119,7 +124,8 @@ class BarcodeCam {
                 processImageProxy(
                     barcodeScanner = scanner,
                     imageProxy = imageProxy,
-                    onSuccess = onBarcodeScanned
+                    onFailure = onFailure,
+                    onSuccess = onBarcodeScanned,
                 )
             }
 
@@ -131,38 +137,47 @@ class BarcodeCam {
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
-                camera = cameraProvider.bindToLifecycle(
-                    lifecycleOwner, cameraSelector, preview, imageCapture, imageAnalysis
-                )
-
+                camera =
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        cameraSelector,
+                        preview,
+                        imageCapture,
+                        imageAnalysis,
+                    )
             } catch (exc: Exception) {
+                onFailure?.invoke(exc)
                 Log.e(ContentValues.TAG, "Use case binding failed", exc)
             }
-
         }, ContextCompat.getMainExecutor(context))
     }
 
     private fun processImageProxy(
         barcodeScanner: BarcodeScanner,
         imageProxy: ImageProxy,
-        onSuccess: (Barcode?) -> Unit
+        onFailure: ((Exception) -> Unit)? = null,
+        onSuccess: (String) -> Unit,
     ) {
         imageProxy.image?.let { image ->
             val inputImage =
                 InputImage.fromMediaImage(
                     image,
-                    imageProxy.imageInfo.rotationDegrees
+                    imageProxy.imageInfo.rotationDegrees,
                 )
 
             barcodeScanner.process(inputImage)
                 .addOnSuccessListener { barcodeList ->
                     val barcode = barcodeList.getOrNull(0)
-
-                    onSuccess(barcode)
+                    barcode?.displayValue?.let {
+                        if (it.isNotBlank()) {
+                            onSuccess(it)
+                        }
+                    }
                 }
                 .addOnFailureListener {
                     // This failure will happen if the barcode scanning model
                     // fails to download from Google Play Services
+                    onFailure?.invoke(it)
                     Log.e(ContentValues.TAG, it.message.orEmpty())
                 }.addOnCompleteListener {
                     // When the image is from CameraX analysis use case, must
@@ -173,11 +188,5 @@ class BarcodeCam {
                     imageProxy.close()
                 }
         }
-    }
-
-    fun toggleFlash(
-        isOn: Boolean,
-    ) {
-        camera?.cameraControl?.enableTorch(isOn)
     }
 }

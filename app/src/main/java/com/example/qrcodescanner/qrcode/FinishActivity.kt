@@ -1,6 +1,5 @@
 package com.example.qrcodescanner.qrcode
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,7 +31,7 @@ class FinishActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = barcode ?: "cuzinho")
+                        Text(text = barcode ?: "teste")
                     }
                 }
             }

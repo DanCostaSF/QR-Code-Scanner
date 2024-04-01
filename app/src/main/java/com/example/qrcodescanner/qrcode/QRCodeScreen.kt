@@ -1,102 +1,108 @@
-@file:OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
-
 package com.example.qrcodescanner.qrcode
 
-import android.Manifest
 import androidx.camera.core.ExperimentalGetImage
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.qrcodescanner.ui.theme.GreenQRCode
-import com.example.qrcodescanner.ui.theme.QRCodeScannerTheme
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
+import kotlin.math.min
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+private const val LINE_LENGHT_FACTOR = 12
+private const val SQUARE_SIZE = 0.8f
+
+@OptIn(ExperimentalMaterial3Api::class)
 @ExperimentalGetImage
 @Composable
-fun TesteBarcode(parametro: (String?) -> Unit) {
+fun QRCodeScreen(
+    modifier: Modifier = Modifier,
+    hasCameraPermission: Boolean,
+    buttonText: String? = null,
+    onButtonClick: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
+    onFailure: ((Exception) -> Unit)? = null,
+    onResult: (String) -> Unit,
+) {
 
-    QRCodeScannerTheme {
-        val cameraPermission = rememberPermissionState(
-            Manifest.permission.CAMERA
-        )
-        LaunchedEffect(key1 = true) {
-            if (!cameraPermission.status.isGranted) {
-                cameraPermission.launchPermissionRequest()
-            }
-        }
+    val camera = remember {
+        UDSQRCodeCamera()
+    }
 
-        val camera = remember {
-            BarcodeCam()
-        }
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+    ) { paddingValues ->
+        Box {
+            Box(
+                modifier =
+                Modifier
+                    .padding(paddingValues)
+                    .drawWithContent {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize()
-        ) { paddingValues ->
-            Box {
-                Box(
-                    modifier = Modifier
-                        .padding(paddingValues)
-                        .drawWithContent {
-                            val canvasWidth = size.width
-                            val canvasHeight = size.height
-                            val width = canvasWidth * .9f
-                            val height = width * 3 / 4f
+                        val size = min(canvasWidth, canvasHeight) * SQUARE_SIZE
 
-                            drawContent()
+                        val topLeftX = (canvasWidth - size) / 2
+                        val topLeftY = (canvasHeight - size) / 2
 
-                            val rectangleTopLeft = Offset((canvasWidth - width) / 2, canvasHeight * .3f)
-                            val rectangleSize = Size(width, height)
+                        drawContent()
 
-                            drawRect(Color(0x99000000))
+                        val squareTopLeft = Offset(topLeftX, topLeftY)
+                        val squareSize = Size(size, size)
 
-                            // Draws the rectangle in the middle
-                            drawRoundRect(
-                                topLeft = Offset(
-                                    (canvasWidth - width) / 2,
-                                    canvasHeight * .3f
-                                ),
-                                size = Size(width, height),
-                                color = Color.Transparent,
-                                blendMode = BlendMode.SrcIn
-                            )
+                        drawRect(Color(0x99000000))
 
-                            drawQrBorderCanvas(
-                                curve = 0.dp,
-                                strokeWidth = 3.dp,
-                                capSize = 24.dp,
-                                rectangleTopLeft = rectangleTopLeft,
-                                rectangleSize = rectangleSize
-                            )
-
-                        }
-                ) {
-                    if (cameraPermission.status.isGranted) {
-                        camera.CameraPreview(
-                            onBarcodeScanned = { barcode ->
-                                barcode?.displayValue?.let {
-                                        parametro.invoke(it)
-                                }
-                            }
+                        // Draws the rectangle in the middle
+                        drawRoundRect(
+                            topLeft = squareTopLeft,
+                            size = squareSize,
+                            color = Color.Transparent,
+                            blendMode = BlendMode.SrcIn,
+                            cornerRadius = CornerRadius.Zero,
                         )
+
+                        drawQrBorderCanvas(
+                            rectangleTopLeft = squareTopLeft,
+                            rectangleSize = squareSize,
+                        )
+                    },
+            ) {
+                if (hasCameraPermission) {
+                    camera.CameraPreview(
+                        onBarcodeScanned = onResult
+                    )
+                }
+            }
+            buttonText?.let {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(
+                            bottom = 16.dp,
+                            start = 36.dp,
+                            end = 36.dp
+                        )
+                ) {
+                    Button(
+                        onClick = { onButtonClick?.invoke() }
+                    ) {
+                        Text(text = "Ler QRCode")
                     }
                 }
             }
@@ -106,77 +112,101 @@ fun TesteBarcode(parametro: (String?) -> Unit) {
 
 private fun DrawScope.drawQrBorderCanvas(
     borderColor: Color = GreenQRCode,
-    curve: Dp,
-    strokeWidth: Dp,
-    capSize: Dp,
-    lineCap: StrokeCap = StrokeCap.Round,
     rectangleTopLeft: Offset,
-    rectangleSize: Size
+    rectangleSize: Size,
 ) {
-    val curvePx = curve.toPx()
-    val mCapSize = capSize.toPx()
+    val strokeWidthPx = 2.dp.toPx()
 
-    // Linha inferior esquerda para centro
+    // Coordenadas dos cantos do quadrado
+    val topRightCorner = Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y)
+    val bottomLeftCorner = Offset(rectangleTopLeft.x, rectangleTopLeft.y + rectangleSize.height)
+    val bottomRightCorner =
+        Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y + rectangleSize.height)
+
+    // Define um fator de aumento para o tamanho da linha
+    val lineLengthFactor = LINE_LENGHT_FACTOR
+
+    // Desenha as linhas da borda
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y + rectangleSize.height),
-        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y + rectangleSize.height),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(rectangleTopLeft.x - strokeWidthPx, rectangleTopLeft.y - strokeWidthPx),
+        end = Offset(
+            rectangleTopLeft.x - strokeWidthPx,
+            rectangleTopLeft.y + strokeWidthPx * lineLengthFactor,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y + rectangleSize.height),
-        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y + rectangleSize.height),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(rectangleTopLeft.x - strokeWidthPx, rectangleTopLeft.y - strokeWidthPx),
+        end = Offset(
+            rectangleTopLeft.x + strokeWidthPx * lineLengthFactor,
+            rectangleTopLeft.y - strokeWidthPx,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha superior
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y + rectangleSize.height - mCapSize),
-        Offset(rectangleTopLeft.x + rectangleSize.width, rectangleTopLeft.y + rectangleSize.height - curvePx),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(topRightCorner.x + strokeWidthPx, topRightCorner.y - strokeWidthPx),
+        end = Offset(
+            topRightCorner.x + strokeWidthPx,
+            topRightCorner.y + strokeWidthPx * lineLengthFactor,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha inferior
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y + rectangleSize.height),
-        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y + rectangleSize.height),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(topRightCorner.x + strokeWidthPx, topRightCorner.y - strokeWidthPx),
+        end = Offset(
+            topRightCorner.x - strokeWidthPx * lineLengthFactor,
+            topRightCorner.y - strokeWidthPx,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha esquerda
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x, rectangleTopLeft.y + curvePx),
-        Offset(rectangleTopLeft.x, rectangleTopLeft.y + mCapSize),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(bottomLeftCorner.x - strokeWidthPx, bottomLeftCorner.y + strokeWidthPx),
+        end = Offset(
+            bottomLeftCorner.x - strokeWidthPx,
+            bottomLeftCorner.y - strokeWidthPx * lineLengthFactor,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha superior esquerda para centro
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + curvePx, rectangleTopLeft.y),
-        Offset(rectangleTopLeft.x + mCapSize, rectangleTopLeft.y),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(bottomLeftCorner.x - strokeWidthPx, bottomLeftCorner.y + strokeWidthPx),
+        end =
+        Offset(
+            bottomLeftCorner.x + strokeWidthPx * lineLengthFactor,
+            bottomLeftCorner.y + strokeWidthPx,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha superior direita para centro
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y),
-        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(bottomRightCorner.x + strokeWidthPx, bottomRightCorner.y + strokeWidthPx),
+        end =
+        Offset(
+            bottomRightCorner.x + strokeWidthPx,
+            bottomRightCorner.y - strokeWidthPx * lineLengthFactor,
+        ),
+        strokeWidth = strokeWidthPx,
     )
 
-    // Linha inferior direita para centro
     drawLine(
-        SolidColor(borderColor),
-        Offset(rectangleTopLeft.x + rectangleSize.width - curvePx, rectangleTopLeft.y + rectangleSize.height),
-        Offset(rectangleTopLeft.x + rectangleSize.width - mCapSize, rectangleTopLeft.y + rectangleSize.height),
-        strokeWidth.toPx(), lineCap
+        color = borderColor,
+        start = Offset(bottomRightCorner.x + strokeWidthPx, bottomRightCorner.y + strokeWidthPx),
+        end =
+        Offset(
+            bottomRightCorner.x - strokeWidthPx * lineLengthFactor,
+            bottomRightCorner.y + strokeWidthPx,
+        ),
+        strokeWidth = strokeWidthPx,
     )
-
 }
