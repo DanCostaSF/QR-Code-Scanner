@@ -48,16 +48,6 @@ class QRCodeActivity : ComponentActivity() {
             mutableStateOf("")
         }
 
-        var permissionCamera by remember {
-            mutableStateOf(false)
-        }
-
-        LaunchedEffect(key1 = true) {
-            if (cameraPermission.status.isGranted) {
-                permissionCamera = true
-            }
-        }
-
         val context = LocalContext.current
 
 
@@ -73,12 +63,13 @@ class QRCodeActivity : ComponentActivity() {
 
                 cameraPermission.status.isGranted -> {
                     openQRCodeReader = true
+                    qrCodeResult = ""
                 }
             }
         }
 
         if (openQRCodeReader) {
-            QRCodeScreen(hasCameraPermission = permissionCamera) {
+            QRCodeReader(hasCameraPermission = cameraPermission.status.isGranted) {
                 if (it.isNotEmpty() && it != qrCodeResult) {
                     qrCodeResult = it
                     val intent = Intent(this@QRCodeActivity, FinishActivity::class.java).run {
